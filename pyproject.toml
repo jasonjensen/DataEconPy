@@ -1,0 +1,133 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "DataEconPy"
+version = "0.1.0"
+description = "Read and write DataEcon (.daec) files from Python, for TimeSeriesEconPy, pandas and polars"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Jason Jensen", email = "jason.o.jensen@gmail.com" }]
+keywords = ["dataecon", "daec", "time-series", "macroeconomics", "timeseriesecon"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: C",
+    "Topic :: Scientific/Engineering",
+    "Typing :: Typed",
+]
+dependencies = ["numpy>=1.26"]
+
+[project.optional-dependencies]
+tsecon = ["TimeSeriesEconPy>=0.0.1.dev3"]
+pandas = ["pandas>=2.2"]
+polars = ["polars>=1.0"]
+all = ["TimeSeriesEconPy>=0.0.1.dev3", "pandas>=2.2", "polars>=1.0"]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.8", "mypy>=1.13"]
+
+[project.urls]
+Homepage = "https://github.com/jasonjensen/DataEconPy"
+Repository = "https://github.com/jasonjensen/DataEconPy"
+Issues = "https://github.com/jasonjensen/DataEconPy/issues"
+"DataEcon (C library)" = "https://github.com/bankofcanada/DataEcon"
+"TimeSeriesEcon.jl" = "https://github.com/bankofcanada/TimeSeriesEcon.jl"
+"TimeSeriesEconPy" = "https://github.com/Nic2020/TimeSeriesEconPy"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dataecon"]
+# The compiled DataEcon library is produced by hatch_build.py into
+# src/dataecon/_lib/ and is gitignored, so it must be force-included here.
+artifacts = ["src/dataecon/_lib/*.so", "src/dataecon/_lib/*.dylib", "src/dataecon/_lib/*.dll"]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+# Compiles vendor/dataecon-c into src/dataecon/_lib/ -- see hatch_build.py.
+path = "hatch_build.py"
+
+[tool.hatch.build.targets.sdist]
+# The sdist ships the C sources so that it can build the library anywhere.
+include = [
+    "/src",
+    "/tests",
+    "/vendor",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
+    "/hatch_build.py",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "SIM", "RUF", "N", "PL", "PT", "D"]
+ignore = [
+    "D105",    # undocumented magic methods
+    "D203",    # conflicts with D211
+    "D213",    # conflicts with D212
+    "PLR0913", # many arguments is normal for the C-shaped store_* calls
+    "PLR2004", # magic values are the point in format-constant code
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D", "PLR2004", "S101", "PT011", "PLC0415", "N812", "N817"]
+# The dump formatter deliberately mirrors the C driver's switch statement
+# branch for branch, so that the two stay comparable by eye.
+"tests/cross/pydump.py" = ["PLR0911", "PLR0912"]
+"hatch_build.py" = ["D", "INP001", "PLC0415"]
+# The ctypes binding is a transcription of daec.h; its "constants" are the format.
+"src/dataecon/_clib.py" = ["N816"]
+# Storage-class dispatch genuinely fans out across the type/class matrix, and the
+# converters are reached through deliberately lazy imports (see below).
+"src/dataecon/_values.py" = ["PLR0911", "PLR0912", "PLC0415"]
+"src/dataecon/_codec.py" = ["PLR0911", "PLR0912", "PLC0415", "PLR0917"]
+# `import dataecon._clib as C` mirrors the Julia connector's `C.jl` namespace,
+# and the C entry points are reached lazily so that importing the package never
+# requires the shared library to be present.
+"src/dataecon/interop/_tsecon.py" = ["PLR0911", "PLC0415", "N812"]
+"src/dataecon/interop/pandas.py" = ["PLC0415"]
+"src/dataecon/interop/polars.py" = ["PLC0415"]
+"src/dataecon/interop/__init__.py" = ["PLC0415"]
+"src/dataecon/build.py" = ["PLC0415"]
+# `file.py` imports the value layer lazily to break the cycle between them, and
+# its store_* signatures mirror the C entry points argument for argument.
+"src/dataecon/file.py" = ["PLC0415", "PLR0917", "N812"]
+"src/dataecon/_highlevel.py" = ["PLC0415"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+show_error_codes = true
+files = ["src/dataecon"]
+
+[[tool.mypy.overrides]]
+module = ["tsecon.*", "pandas.*", "polars.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+markers = [
+    "julia: cross-validation against the Julia connector (needs a Julia toolchain)",
+    "creference: cross-validation against a driver linked directly to libdaec",
+]
