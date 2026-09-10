@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -52,6 +53,14 @@ def c_driver(tmp_path_factory: pytest.TempPathFactory) -> Path:
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         pytest.skip(f"could not build the reference C driver:\n{result.stderr}")
+
+    if sys.platform == "win32":
+        # Windows has no rpath, so the `-Wl,-rpath` above buys nothing there and
+        # the driver would die at startup with STATUS_DLL_NOT_FOUND. The DLL
+        # search does begin in the executable's own directory, so put a copy of
+        # libdaec beside it.
+        shutil.copy2(library, out.parent / library.name)
+
     return out
 
 

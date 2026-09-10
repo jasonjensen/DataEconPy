@@ -125,8 +125,17 @@ against that on demand via `dataecon.library_version()`.
 The test suite includes a parity harness (`tests/test_c_parity.py`) that writes
 files with a C driver linked directly against `libdaec` and reads them back in
 Python, and vice versa, covering every storage class, element type and
-frequency. See [`tests/README.md`](tests/README.md) for how to run the
-cross-connector checks, including against Julia.
+frequency.
+
+Compatibility with the Julia connector is checked the same way, and those
+checks have been run: `tests/test_julia.py` writes a database from
+`TimeSeriesEcon.jl` for Python to verify, and has Julia verify a database
+Python wrote. Both directions pass against **TimeSeriesEcon 0.7.3** on **Julia
+1.10.5**, with both connectors on the same `libdaec` **0.4.0**
+(`DataEcon_jll 0.4.0+0` on the Julia side). The three known cross-connector
+asymmetries are documented and asserted in
+[`tests/README.md`](tests/README.md), which also covers how to run the checks
+yourself.
 
 ## Licence
 
