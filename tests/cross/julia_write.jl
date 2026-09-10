@@ -20,7 +20,14 @@ function build()
         f32   = Float32(2.5),
         c128  = 1.5 + 2.25im,
         text  = "hello .daec",
+        # A Bool is stored as a 1-byte signed integer with no attribute, because
+        # the connector only records `jtype` when the stored value's type differs
+        # from the original -- and `_to_de_scalar_val(::Integer)` is the identity.
+        # It therefore reads back on the Python side as an integer, not a bool.
         flag  = true,
+        # A Symbol *is* converted on the way out (to a String), so this one does
+        # carry `jtype`, which is the attribute path worth exercising.
+        sym   = :baseline,
 
         # --- dates ---------------------------------------------------------
         dates = Workspace(

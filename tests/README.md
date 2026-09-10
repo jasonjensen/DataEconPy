@@ -80,6 +80,24 @@ Julia connector requires (a `type_tseries` with a date-range axis, a
 `type_mvtseries` with range and names axes, and so on), so the fixture cannot
 rot unnoticed.
 
+## Known cross-connector asymmetries
+
+These are properties of the format, not defects, and the tests assert them:
+
+* **Julia `Bool` scalars read back as integers.** The Julia connector writes
+  `jtype` only when the stored value's type differs from the original, and a
+  `Bool` is stored as itself (a 1-byte signed integer). Nothing in the file
+  records that it was boolean. Python's own `bool` round-trips, because we write
+  `pytype` for it — but Julia will read *that* as an integer, symmetrically.
+* **Plain ranges lose their offset.** A plain axis stores only a length, so
+  Julia writes `1:6` and reads `1:6` (1-based), while Python writes `range(0, 6)`
+  and reads `range(0, 6)` (0-based). Python additionally records a `pystart`
+  attribute so a non-zero start survives a Python-to-Python round trip.
+* **Python never writes `jtype`.** The Julia connector evaluates that attribute
+  with `Meta.parse`, so a Python type name in it would raise there. Python
+  writes `pytype`/`pyeltype`, which Julia ignores, and reads Julia's
+  `jtype`/`jeltype` for the types it can map.
+
 ## Markers
 
 * `julia` — needs a Julia toolchain. Run with `pytest -m julia`, or exclude with

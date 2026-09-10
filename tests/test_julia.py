@@ -189,9 +189,20 @@ class TestPythonReadsJulia:
         with de.opendaec(julia_written) as f:
             assert f.get_attribute("/series/ts_q", "units") == "billions"
 
-    def test_julia_bool_attribute_is_honoured(self, julia_written: Path) -> None:
-        """Julia records a Bool with a ``jtype`` attribute; we must honour it."""
-        assert de.readdb(julia_written).flag is True
+    def test_a_julia_bool_reads_back_as_an_integer(self, julia_written: Path) -> None:
+        """A documented asymmetry, not a defect.
+
+        The Julia connector records ``jtype`` only when the stored value's type
+        differs from the original, and a ``Bool`` is stored as itself -- as a
+        1-byte signed integer, with no attribute. Nothing in the file says it
+        was ever a boolean, so it reads back here as an integer. Python's own
+        ``bool`` round-trips, because we write ``pytype`` for it.
+        """
+        assert de.readdb(julia_written).flag == 1
+
+    def test_a_julia_symbol_is_honoured_via_jtype(self, julia_written: Path) -> None:
+        """A Symbol *is* converted on the way out, so it does carry ``jtype``."""
+        assert de.readdb(julia_written).sym == "baseline"
 
 
 @requires_tsecon

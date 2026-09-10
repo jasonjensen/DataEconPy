@@ -51,7 +51,9 @@ function main()
     # --- time series -------------------------------------------------------
     ts_q = data.series.ts_q
     check("series.ts_q.firstdate", firstdate(ts_q), 2020Q1)
-    check("series.ts_q.frequency", frequencyof(ts_q), Quarterly)
+    # N.B. `frequencyof` returns the concrete `Quarterly{3}`, and `Quarterly` on
+    # its own is a UnionAll, so `==` between them is false. Compare with `<:`.
+    check("series.ts_q.frequency", frequencyof(ts_q) <: Quarterly, true)
     check_values("series.ts_q", ts_q.values, collect(0.0:7.0))
 
     ts_d = data.series.ts_d
